@@ -32,7 +32,8 @@ class FunctionCallingAgent(BaseAgent):
             if not self.tools:
                 response = completion(
                     model=self.model_name,
-                    messages=self.messages
+                    messages=self.messages,
+                    **self.litellm_kwargs
                 )
                 if emitter:
                     await emitter({
@@ -47,7 +48,8 @@ class FunctionCallingAgent(BaseAgent):
                 model=self.model_name,
                 messages=self.messages,
                 tools=self.tools,
-                tool_choice="auto"
+                tool_choice="auto",
+                **self.litellm_kwargs
             )
 
             # Emit thinking state
@@ -57,7 +59,7 @@ class FunctionCallingAgent(BaseAgent):
                     "message": response.choices[0].message.content or "Processing next step..."
                 })
 
-            print('aaaaaadsfsdfdsfsfsdfs')
+            # print('aaaaaadsfsdfdsfsfsdfs')
 
             # Handle tool calls
             tool_calls = getattr(response.choices[0].message, 'tool_calls', None)
@@ -85,7 +87,7 @@ class FunctionCallingAgent(BaseAgent):
                     "message": f"Executing {len(tool_calls)} actions..."
                 })
 
-            print('aaaaaasdfsfddsfsdfdsfsfsdfs')
+            # print('aaaaaasdfsfddsfsdfdsfsfsdfs')
 
             # Process each tool call and emit results
             for tool_call in tool_calls:

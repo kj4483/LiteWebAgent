@@ -22,7 +22,11 @@ class HighLevelPlanningAgent(BaseAgent):
             return None
 
         if not self.tools:
-            response = completion(model=self.model_name, messages=self.messages)
+            response = completion(
+                model=self.model_name,
+                messages=self.messages,
+                **self.litellm_kwargs
+            )
             logger.info('agent: %s, prompt tokens: %s, completion tokens: %s', self.model_name,
                         str(response.usage.prompt_tokens), str(response.usage.completion_tokens))
             logger.info('agent: %s, depth: %s, response: %s', self.model_name, depth, response)
@@ -81,7 +85,13 @@ class HighLevelPlanningAgent(BaseAgent):
                 self.messages.append({"role": "user", "content": plan})
 
         logger.info('updated plan: %s', plan)
-        response = completion(model=self.model_name, messages=self.messages, tools=self.tools, tool_choice="auto")
+        response = completion(
+            model=self.model_name,
+            messages=self.messages,
+            tools=self.tools,
+            tool_choice="auto",
+            **self.litellm_kwargs
+        )
 
         logger.info('agent: %s, prompt tokens: %s, completion tokens: %s', self.model_name,
                     str(response.usage.prompt_tokens), str(response.usage.completion_tokens))

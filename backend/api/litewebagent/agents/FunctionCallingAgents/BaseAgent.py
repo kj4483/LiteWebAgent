@@ -1,10 +1,13 @@
 import json
 import logging
+import os
 from typing import List, Dict
 
-logger = logging.getLogger(__name__)
+from litellm import completion
 from openai import OpenAI
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 
 _ = load_dotenv()
 
@@ -21,15 +24,33 @@ class BaseAgent:
         self.playwright_manager = playwright_manager
         self.messages.append({"role": "user", "content": "The goal is:{}".format(self.goal)})
         self.log_folder = log_folder
+        self.litellm_kwargs = {}
+
+        if "gemini" in self.model_name.lower():
+            gemini_key = os.getenv("GEMINI_API_KEY")
+            if gemini_key:
+                # Force LiteLLM to use the Gemini API key path instead of Vertex ADC
+                self.litellm_kwargs = {
+                    "api_key": gemini_key,
+                    "custom_llm_provider": "gemini",
+                }
 
     def make_plan(self):
         messages = [{"role": "system",
                      "content": "You are are helpful assistant to make a plan for a task or user request. Please provide a plan in the next few sentences."}]
         messages.append({"role": "assistant", "content": "The goal is{}".format(self.goal)})
-        chat_completion = client.chat.completions.create(
-            model=self.model_name, messages=messages,
-        )
-        plan = chat_completion.choices[0].message.content
+        if "gemini" in self.model_name.lower():
+            chat_completion = completion(
+                model=self.model_name,
+                messages=messages,
+                **self.litellm_kwargs,
+            )
+            plan = chat_completion.choices[0].message.content
+        else:
+            chat_completion = client.chat.completions.create(
+                model=self.model_name, messages=messages,
+            )
+            plan = chat_completion.choices[0].message.content
         return plan
 
     async def process_tool_calls(self, tool_calls: List[Dict]) -> List[Dict]:

@@ -110,7 +110,7 @@ async def run_agent_initial_steps(request: AgentRequest):
         session_id = playwright_manager.get_session_id()
 
         agent_type = "FunctionCallingAgent"
-        model = "gpt-4o-mini"
+        model = "gemini-2.5-flash"
         features = "axtree"
         log_folder = "log"
         elements_filter="som"
@@ -150,7 +150,7 @@ async def run_agent_followup_steps(request: AgentFollowUpRequest):
         session_id = playwright_manager.get_session_id()
 
         agent_type = "FunctionCallingAgent"
-        model = "gpt-4o-mini"
+        model = "gemini-2.5-flash"
         features = "axtree"
         log_folder = "log"
         elements_filter="som"
@@ -303,7 +303,7 @@ async def process_agent_steps(request: AgentRequest, emitter: RealTimeEmitter):
             request.starting_url,
             request.goal,
             playwright_manager=playwright_manager,
-            model_name="gpt-4o-mini",
+            model_name="gemini-2.5-flash",
             agent_type="FunctionCallingAgent",
             features="axtree",
             tool_names=["navigation", "select_option", "upload_file"],
@@ -352,7 +352,7 @@ async def run_agent_followup_steps_stream(request: AgentFollowUpRequest):
             emitter.emit(f"Reconnected to browser. Live URL: {live_browser_url}")
 
             agent_type = "FunctionCallingAgent"
-            model = "gpt-4o-mini"
+            model = "gemini-2.5-flash"
             features = "axtree"
             log_folder = "log"
             elements_filter="som"
