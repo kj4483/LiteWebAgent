@@ -26,7 +26,7 @@ def query_openai_model(system_msg, prompt, screenshot, num_outputs):
     base64_image = base64.b64encode(screenshot).decode('utf-8')
 
     response = openai_client.chat.completions.create(
-        model="gpt-4o",
+        model="gemini-2.5-flash",
         messages=[
             {"role": "system", "content": system_msg},
             {"role": "user",
