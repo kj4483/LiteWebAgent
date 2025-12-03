@@ -349,7 +349,7 @@ async def run_agent_followup_steps_stream(request: AgentFollowUpRequest):
             live_browser_url = await playwright_manager.get_live_browser_url()
             session_id = playwright_manager.get_session_id()
 
-            emitter.emit(f"Reconnected to browser. Live URL: {live_browser_url}")
+            await emitter.emit(f"Reconnected to browser. Live URL: {live_browser_url}")
 
             agent_type = "FunctionCallingAgent"
             model = "gemini-2.5-flash"
@@ -370,17 +370,17 @@ async def run_agent_followup_steps_stream(request: AgentFollowUpRequest):
                 elements_filter=elements_filter
             )
 
-            emitter.emit("Agent setup completed")
+            await emitter.emit("Agent setup completed")
 
             response = await agent.send_prompt(request.goal, emitter=emitter.emit)
-            emitter.emit(f"Final Response: {response}")
+            await emitter.emit(f"Final Response: {response}")
 
         except Exception as e:
-            emitter.emit(f"Error: {str(e)}")
+            await emitter.emit(f"Error: {str(e)}")
         finally:
-            emitter.emit(None)
+            await emitter.close()
 
-        async for chunk in emitter.get_emitter():
+        async for chunk in emitter:
             yield chunk
 
     return StreamingResponse(stream(), media_type="text/event-stream")
