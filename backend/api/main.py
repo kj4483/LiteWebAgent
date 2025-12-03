@@ -122,7 +122,7 @@ async def run_agent_initial_steps(request: AgentRequest):
             model_name=model,
             agent_type=agent_type,
             features=features,
-            tool_names=["navigation", "select_option", "upload_file"],
+            tool_names=["navigation", "select_option", "upload_file", "save_file"],
             log_folder=log_folder,
             s3_path=request.s3_path,
             elements_filter=elements_filter
@@ -162,7 +162,7 @@ async def run_agent_followup_steps(request: AgentFollowUpRequest):
             model_name=model,
             agent_type=agent_type,
             features=features,
-            tool_names=["navigation", "select_option", "upload_file"],
+            tool_names=["navigation", "select_option", "upload_file", "save_file"],
             log_folder=log_folder,
             s3_path=request.s3_path,
             elements_filter=elements_filter
@@ -306,7 +306,7 @@ async def process_agent_steps(request: AgentRequest, emitter: RealTimeEmitter):
             model_name="gemini-2.5-flash",
             agent_type="FunctionCallingAgent",
             features="axtree",
-            tool_names=["navigation", "select_option", "upload_file"],
+            tool_names=["navigation", "select_option", "upload_file", "save_file"],
             log_folder="log",
             s3_path=request.s3_path,
             elements_filter="som"
@@ -364,7 +364,7 @@ async def run_agent_followup_steps_stream(request: AgentFollowUpRequest):
                 model_name=model,
                 agent_type=agent_type,
                 features=features,
-                tool_names=["navigation", "select_option", "upload_file"],
+                tool_names=["navigation", "select_option", "upload_file", "save_file"],
                 log_folder=log_folder,
                 s3_path=request.s3_path,
                 elements_filter=elements_filter

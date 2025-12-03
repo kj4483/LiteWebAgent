@@ -1,39 +1,37 @@
+import asyncio
+import random
+import time
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
-import time
-import random
+from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 from .registry import ToolRegistry, Tool
 
-def webscraping(task_description, features=None, branching_factor=None, playwright_manager=None, log_folder='log', s3_path = None, elements_filter=None):
+
+async def webscraping(task_description=None, features=None, branching_factor=None, playwright_manager=None, log_folder='log', s3_path = None, elements_filter=None):
     max_retries = 3
-    page = playwright_manager.get_page()
+    page = await playwright_manager.get_page()
 
     for attempt in range(max_retries):
         try:
-            # Wait for potential Cloudflare challenge to be solved
-            page.wait_for_load_state('networkidle')
+            await page.wait_for_load_state('networkidle', timeout=10000)
 
-            # Check if we're still on a Cloudflare page
-            title = page.title()
+            title = await page.title()
             if 'cloudflare' in title.lower():
                 print(f"Cloudflare detected, waiting... (Attempt {attempt + 1})")
-                time.sleep(5)  # Wait for 5 seconds before retrying
+                await asyncio.sleep(5)
                 continue
 
-            # Get the current URL
             current_url = page.url
 
-            page_content = page.content()
+            page_content = await page.content()
             soup = BeautifulSoup(page_content, 'html.parser')
 
-            # Remove unwanted elements
             for element in soup.select('aside, header, nav, footer'):
                 element.decompose()
 
-            # Extract content
             content = {
                 'url': current_url,
-                'title': page.title(),
+                'title': await page.title(),
                 'main_content': get_main_content(soup),
                 'paragraphs': get_paragraphs(soup),
                 'headings': get_headings(soup),
@@ -44,16 +42,56 @@ def webscraping(task_description, features=None, branching_factor=None, playwrig
 
             return content
 
+        except PlaywrightTimeoutError:
+            # If page never loads (e.g., about:blank), return minimal info to avoid retries
+            return {
+                'url': page.url,
+                'title': 'timeout waiting for page',
+                'main_content': '',
+                'paragraphs': [],
+                'headings': [],
+                'meta_data': {},
+                'internal_links': [],
+                'formatted_content': ''
+            }
         except Exception as e:
             print(f"Error occurred: {e}")
             if attempt == max_retries - 1:
                 raise
-            time.sleep(random.uniform(1, 3))
+            await asyncio.sleep(random.uniform(1, 3))
 
 
 def get_main_content(soup):
-    main_content = soup.find(id='main')
-    return main_content.text if main_content else "Main content not found"
+    # Try multiple selectors to find main content
+    selectors = [
+        {'id': 'main'},
+        {'id': 'content'},
+        {'class': 'main-content'},
+        {'class': 'main'},
+        {'role': 'main'},
+    ]
+    
+    for selector in selectors:
+        main_content = soup.find(**selector)
+        if main_content:
+            text = main_content.get_text(strip=True)
+            if text and len(text) > 20:
+                return text
+    
+    # Try finding main tag or article
+    main_content = soup.find('main') or soup.find('article')
+    if main_content:
+        text = main_content.get_text(strip=True)
+        if text and len(text) > 20:
+            return text
+    
+    # Fallback: return first substantial text block
+    for tag in soup.find_all(['main', 'article', 'section']):
+        text = tag.get_text(strip=True)
+        if text and len(text) > 100:
+            return text[:2000]
+    
+    return ""
 
 
 def get_paragraphs(soup):

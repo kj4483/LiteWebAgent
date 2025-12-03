@@ -10,6 +10,17 @@ logger = logging.getLogger(__name__)
 
 
 class FunctionCallingAgent(BaseAgent):
+    def _allow_save_file(self) -> bool:
+        intent_markers = ["save", "download", "export", "log", "record", "file", "csv", "txt", "write to", "save_file"]
+        goal_text = (self.goal or "").lower()
+        last_user = ""
+        for msg in reversed(self.messages):
+            if msg.get("role") == "user":
+                last_user = (msg.get("content") or "").lower()
+                break
+        combined = goal_text + " " + last_user
+        return any(marker in combined for marker in intent_markers)
+
     async def send_completion_request(self, plan: str, depth: int = 0, emitter=None) -> Dict:
         if plan is None and depth == 0:
             plan = self.make_plan()
@@ -90,14 +101,29 @@ class FunctionCallingAgent(BaseAgent):
             # print('aaaaaasdfsfddsfsdfdsfsfsdfs')
 
             # Process each tool call and emit results
+            filtered_calls = []
             for tool_call in tool_calls:
+                if tool_call.function.name == "save_file" and not self._allow_save_file():
+                    logger.info("Skipping save_file due to no explicit save intent")
+                    if emitter:
+                        await emitter({
+                            "type": "tool_skipped",
+                            "message": "Skipping save_file (no explicit save intent)."
+                        })
+                    continue
+                filtered_calls.append(tool_call)
+
+            for tool_call in filtered_calls:
                 if emitter:
                     await emitter({
                         "type": "tool_execution",
                         "message": f"Executing: {tool_call.function.name}"
                     })
                     
-            tool_responses = await self.process_tool_calls(tool_calls)
+            if not filtered_calls:
+                return await self.send_completion_request(plan, depth + 1, emitter)
+
+            tool_responses = await self.process_tool_calls(filtered_calls)
             
             for response in tool_responses:
                 if emitter:

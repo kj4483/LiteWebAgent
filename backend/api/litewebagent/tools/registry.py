@@ -72,5 +72,7 @@ class ToolRegistry:
             register_upload_file_tool()
             from .webscraping import register_webscraping_tool
             register_webscraping_tool()
+            from .save_file import register_save_file_tool
+            register_save_file_tool()
         except Exception as e:
             print(f"Error while registering tools: {e}")  # Debug statement to catch any import or registration issues

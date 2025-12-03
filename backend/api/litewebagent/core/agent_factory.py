@@ -1,6 +1,7 @@
 import sys
 import os
 import logging
+import inspect
 from dotenv import load_dotenv
 from openai import OpenAI
 from ..agents.FunctionCallingAgents.FunctionCallingAgent import FunctionCallingAgent
@@ -61,15 +62,30 @@ def create_overwrite_or_append_s3_file(s3_path, goal, starting_url, overwrite=Tr
                 raise
 
 
-def create_function_wrapper(func, features, branching_factor, playwright_manager, log_folder, s3_path, elements_filter):
-    def wrapper(task_description):
-        return func(task_description, features, branching_factor, playwright_manager, log_folder, s3_path, elements_filter)
+def create_function_wrapper(func, features, branching_factor, playwright_manager, log_folder, s3_path, elements_filter, model_name=None):
+    async def wrapper(**kwargs):
+        # Allow any tool-specific args; inject shared deps.
+        injected = {
+            "features": features,
+            "branching_factor": branching_factor,
+            "playwright_manager": playwright_manager,
+            "log_folder": log_folder,
+            "s3_path": s3_path,
+            "elements_filter": elements_filter,
+        }
+        if model_name and "model_name" in inspect.signature(func).parameters:
+            injected["model_name"] = model_name
+
+        result = func(**kwargs, **injected)
+        if inspect.isawaitable(result):
+            return await result
+        return result
 
     return wrapper
 
 
 async def setup_function_calling_web_agent(starting_url, goal, playwright_manager, model_name="gpt-4o-mini", agent_type="DemoAgent",
-                                     features=['axtree'], tool_names = ["navigation", "select_option", "upload_file", "webscraping"],
+                                     features=['axtree'], tool_names = ["navigation", "select_option", "upload_file", "webscraping", "save_file"],
                                      branching_factor=None, log_folder="log", s3_path = None, elements_filter=None):
     logger = setup_logger()
 
@@ -80,8 +96,16 @@ async def setup_function_calling_web_agent(starting_url, goal, playwright_manage
     available_tools = {}
     tools = []
     for tool_name in tool_names:
-        available_tools[tool_name] = create_function_wrapper(tool_registry.get_tool(tool_name).func, features,
-                                                             branching_factor, playwright_manager, log_folder, s3_path, elements_filter=elements_filter)
+        available_tools[tool_name] = create_function_wrapper(
+            tool_registry.get_tool(tool_name).func,
+            features,
+            branching_factor,
+            playwright_manager,
+            log_folder,
+            s3_path,
+            elements_filter=elements_filter,
+            model_name=model_name,
+        )
         tools.append(tool_registry.get_tool_description(tool_name))
 
     messages = [
@@ -98,6 +122,9 @@ async def setup_function_calling_web_agent(starting_url, goal, playwright_manage
     - Strictly limit your actions to the current task. Do not attempt additional tasks or next steps.
     - Use only the functions provided to you. Do not attempt to use functions or methods that are not explicitly available.
     - For navigation or interaction with page elements, always use the appropriate bid (browser element ID) when required by a function.
+    - Only use save_file when the user explicitly requests saving/downloading/exporting/logging/recording or mentions a file name/path/format (txt, csv, etc.). Do not invoke save_file for general browsing tasks.
+    - Do not call save_file multiple times with the same target unless the user explicitly asks for multiple outputs. One successful save is enough.
+    - If the user requests CSV output, ensure the saved content is valid CSV (include a header row, comma-separated fields, quote text as needed) rather than freeform text.
     - If a task cannot be completed with the available functions, report the limitation rather than attempting unsupported actions.
     - After completing a task, report its completion and await new instructions. Do not suggest or initiate further actions.
 

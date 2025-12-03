@@ -48,8 +48,8 @@ if __name__ == "__main__":
                     choices=["som", "visibility", "none"],
                     help="Filter for dom elements"
                     )
-    parser.add_argument('--tool_names', type=str, default="navigation,select_option,upload_file,webscraping",
-                        help="Comma-separated list of tool names to use (default: navigation,select_option,upload_file,webscraping)")
+    parser.add_argument('--tool_names', type=str, default="navigation,select_option,upload_file,webscraping,save_file",
+                        help="Comma-separated list of tool names to use (default: navigation,select_option,upload_file,webscraping,save_file)")
     parser.add_argument('--branching_factor', type=int, default=None)
     parser.add_argument('--log_folder', type=str, default='log', help='Path to the log folder')
     parser.add_argument('--workflow_memory_website', type=str, default=None, help='Website name for filtering memory')

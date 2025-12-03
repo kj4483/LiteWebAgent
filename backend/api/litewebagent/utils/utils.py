@@ -7,6 +7,14 @@ from dotenv import load_dotenv
 _ = load_dotenv()
 
 logger = logging.getLogger(__name__)
+
+# Use Gemini API via OpenAI-compatible interface
+# Configure API key and base URL for Gemini
+# gemini_api_key = os.getenv("GEMINI_API_KEY")
+# openai_client = OpenAI(
+#     api_key=gemini_api_key,
+#     base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+# )
 openai_client = OpenAI()
 
 
@@ -22,30 +30,51 @@ def setup_logger():
 
 
 def query_openai_model(system_msg, prompt, screenshot, num_outputs):
+    """
+    Query Gemini model via OpenAI-compatible interface.
+    Note: Gemini limits num_outputs to 8 max, so we make sequential calls for more outputs.
+    """
     # base64_image = encode_image(screenshot_path)
     base64_image = base64.b64encode(screenshot).decode('utf-8')
+    
+    # Gemini API limits n to 1-8, so we need to make sequential calls
+    answers = []
+    calls_needed = (num_outputs + 7) // 8  # Round up division
+    
+    for call_idx in range(calls_needed):
+        n_for_this_call = min(8, num_outputs - len(answers))
+        if n_for_this_call <= 0:
+            break
+            
+        try:
+            response = openai_client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": system_msg},
+                    {"role": "user",
+                     "content": [
+                         {"type": "text", "text": prompt},
+                         {"type": "image_url",
+                          "image_url": {
+                              "url": f"data:image/jpeg;base64,{base64_image}",
+                              "detail": "high"
+                          }
+                          }
+                     ]
+                     },
+                ],
+                n=n_for_this_call
+            )
 
-    response = openai_client.chat.completions.create(
-        model="gemini-2.5-flash",
-        messages=[
-            {"role": "system", "content": system_msg},
-            {"role": "user",
-             "content": [
-                 {"type": "text", "text": prompt},
-                 {"type": "image_url",
-                  "image_url": {
-                      "url": f"data:image/jpeg;base64,{base64_image}",
-                      "detail": "high"
-                  }
-                  }
-             ]
-             },
-        ],
-        n=num_outputs
-    )
-
-    answer: list[str] = [x.message.content for x in response.choices]
-    return answer
+            answer = [x.message.content for x in response.choices]
+            answers.extend(answer)
+        except Exception as e:
+            logger.error(f"Error in API call {call_idx + 1}: {str(e)}")
+            if call_idx == 0:  # If first call fails, raise error
+                raise
+            break
+    
+    return answers if answers else ["Unable to generate response"]
 
 
 def encode_image(image_path):
