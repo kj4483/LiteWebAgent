@@ -17,8 +17,18 @@ storage_state = None
 
 playwright_manager = setup_playwright(storage_state='state.json', headless=False)
 
-agent = setup_function_calling_web_agent(starting_url, goal, playwright_manager=playwright_manager, model_name=model, agent_type=agent_type, features=features, elements_filter=elements_filter,
-                        tool_names = ["navigation", "select_option", "upload_file", "webscraping"], branching_factor=branching_factor, log_folder=log_folder)
+agent = setup_function_calling_web_agent(
+    starting_url,
+    goal,
+    playwright_manager=playwright_manager,
+    model_name=model,
+    agent_type=agent_type,
+    features=features,
+    elements_filter=elements_filter,
+    tool_names=["navigation", "select_option", "upload_file", "webscraping", "save_file"],
+    branching_factor=branching_factor,
+    log_folder=log_folder
+)
 response = agent.send_prompt(plan)
 print(response)
 

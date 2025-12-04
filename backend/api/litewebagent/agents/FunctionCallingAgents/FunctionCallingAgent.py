@@ -30,7 +30,7 @@ class FunctionCallingAgent(BaseAgent):
                     "message": f"Plan generated: {plan}"
                 })
 
-        if depth >= 8:
+        if depth >= 32:
             if emitter:
                 await emitter({
                     "type": "warning",

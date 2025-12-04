@@ -12,12 +12,12 @@ class FunctionCallingAgent(BaseAgent):
         if plan is None and depth == 0:
             plan = self.make_plan()
             self.messages.append({"role": "user", "content": "The plan is: {}".format(plan)})
-        if depth >= 8:
+        if depth >= 32:
             return "max depth reached, agent stops execution"
         logger.info("plan is %s", plan)
 
         if not self.tools:
-            response = completion(model=self.model_name, messages=self.messages)
+            response = completion(model=self.model_name, messages=self.messages, **self.litellm_kwargs)
             logger.info('agent: %s, prompt tokens: %s, completion tokens: %s', self.model_name,
                         str(response.usage.prompt_tokens), str(response.usage.completion_tokens))
             logger.info('agent: %s, depth: %s, response: %s', self.model_name, depth, response)
@@ -25,7 +25,7 @@ class FunctionCallingAgent(BaseAgent):
             self.messages.append(message)
             return response.choices[0].message.content
 
-        response = completion(model=self.model_name, messages=self.messages, tools=self.tools, tool_choice="auto")
+        response = completion(model=self.model_name, messages=self.messages, tools=self.tools, tool_choice="auto", **self.litellm_kwargs)
 
         logger.info('agent: %s, prompt tokens: %s, completion tokens: %s', self.model_name,
                     str(response.usage.prompt_tokens), str(response.usage.completion_tokens))

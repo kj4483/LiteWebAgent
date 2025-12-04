@@ -30,13 +30,13 @@ AGENT_CLASSES = {
 }
 
 def create_function_wrapper(func, **kwargs):
-    def wrapper(task_description):
-        return func(task_description, **kwargs)
+    def wrapper(**call_kwargs):
+        return func(**call_kwargs, **kwargs)
 
     return wrapper
 
 
-def setup_function_calling_web_agent(starting_url, goal, playwright_manager, model_name="gpt-4o-mini", agent_type="DemoAgent", tool_names = ["navigation", "select_option", "upload_file", "webscraping"],
+def setup_function_calling_web_agent(starting_url, goal, playwright_manager, model_name="gemini-2.5-flash", agent_type="DemoAgent", tool_names = ["navigation", "select_option", "upload_file", "webscraping", "save_file"],
                                      features=['axtree'], elements_filter=None,
                                      branching_factor=None, log_folder="log", workflow_memory_website=None):
     logger = setup_logger()
@@ -103,7 +103,7 @@ def setup_function_calling_web_agent(starting_url, goal, playwright_manager, mod
     return agent
 
 
-def setup_prompting_web_agent(starting_url, goal, playwright_manager, model_name="gpt-4o-mini", agent_type="DemoAgent", features=['axtree'], elements_filter=None,
+def setup_prompting_web_agent(starting_url, goal, playwright_manager, model_name="gemini-2.5-flash", agent_type="DemoAgent", features=['axtree'], elements_filter=None,
                               branching_factor=None, log_folder="log", storage_state='state.json', headless=False):
     logger = setup_logger()
     if features is None:
@@ -149,4 +149,3 @@ def setup_prompting_web_agent(starting_url, goal, playwright_manager, model_name
         logger.error(error_message)
         return {"error": error_message}
     return agent
-

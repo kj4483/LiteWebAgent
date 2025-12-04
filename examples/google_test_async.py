@@ -23,7 +23,7 @@ async def main():
         model_name=model,
         agent_type=agent_type,
         features=features,
-        tool_names=["navigation", "select_option", "upload_file"],
+        tool_names=["navigation", "select_option", "upload_file", "save_file"],
         log_folder=log_folder,
         elements_filter=elements_filter
     )

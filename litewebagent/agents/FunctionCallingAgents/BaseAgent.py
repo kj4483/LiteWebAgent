@@ -4,12 +4,10 @@ import os
 from typing import List, Dict
 
 logger = logging.getLogger(__name__)
-from openai import OpenAI
 from dotenv import load_dotenv
+from litellm import completion
 
 _ = load_dotenv()
-
-client = OpenAI()
 
 
 class BaseAgent:
@@ -23,6 +21,16 @@ class BaseAgent:
         self.messages.append({"role": "user", "content": "The goal is:{}".format(self.goal)})
         self.log_folder = log_folder
         self.memory = memory
+        
+        # Setup litellm kwargs for Gemini if needed
+        self.litellm_kwargs = {}
+        if "gemini" in self.model_name.lower():
+            gemini_key = os.getenv("GEMINI_API_KEY")
+            if gemini_key:
+                self.litellm_kwargs = {
+                    "api_key": gemini_key,
+                    "custom_llm_provider": "gemini",
+                }
 
     def make_plan(self):
         messages = [{"role": "system",
@@ -31,8 +39,11 @@ class BaseAgent:
             memory_txt = self.memory.retrieve(self.goal)
             messages.append({"role": "user", "content": memory_txt})
         messages.append({"role": "user", "content": "The goal is{}".format(self.goal)})
-        chat_completion = client.chat.completions.create(
-            model=self.model_name, messages=messages,
+        
+        chat_completion = completion(
+            model=self.model_name, 
+            messages=messages,
+            **self.litellm_kwargs
         )
         plan = chat_completion.choices[0].message.content
         with open(os.path.join(self.log_folder, 'plan.txt'), 'a', encoding='utf8') as f:
